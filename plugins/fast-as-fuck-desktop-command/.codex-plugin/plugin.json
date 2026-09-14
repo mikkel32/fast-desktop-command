@@ -1,19 +1,25 @@
 {
   "name": "fast-as-fuck-desktop-command",
-  "version": "0.1.0+codex.20260914144317",
+  "version": "1.0.0+codex.20260914171740",
   "description": "Local Desktop Commander fork with event-driven process output and direct stdio transport.",
   "author": {
-    "name": "Mikkel"
+    "name": "Mikkel Mynderup"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "fast-as-fuck Desktop-Command",
+    "displayName": "FAST Desktop Command",
     "shortDescription": "Fast local files, commands, search, and persistent processes.",
-    "longDescription": "A personal fork of the MIT-licensed Desktop Commander engine. Connects directly to this Mac over stdio, reads only new process output, and wakes pending calls on output or completion. Uses its own configuration directory and disables telemetry and hosted experiments.",
-    "developerName": "Mikkel",
+    "longDescription": "Connect your Mac to Codex with a native Swift app, fast file and image tools, persistent command sessions, and optional macOS computer controls. The app owns the connection and shows its health. Web access uses account sign-in and explicit device pairing.",
+    "developerName": "Mikkel Mynderup",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "Use fast-as-fuck Desktop-Command to list sessions and inspect the local fork's benchmark report."
+    "defaultPrompt": "Use FAST Desktop Command to check the Mac connection and list available sessions.",
+    "websiteURL": "https://fast-desktop-command.mikkel-mynderup.chatgpt.site",
+    "privacyPolicyURL": "https://fast-desktop-command.mikkel-mynderup.chatgpt.site/privacy",
+    "termsOfServiceURL": "https://fast-desktop-command.mikkel-mynderup.chatgpt.site/terms",
+    "brandColor": "#C6F768",
+    "composerIcon": "./assets/composer-icon.png",
+    "logo": "./assets/app-icon.png"
   },
   "mcpServers": "./.mcp.json"
 }

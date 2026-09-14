@@ -1,8 +1,7 @@
 {
   "mcpServers": {
-    "desktop-commander": {
-      "command": "npx",
-      "args": ["-y", "@wonderwhy-er/desktop-commander@latest"]
+    "fast-desktop-command": {
+      "url": "https://fast-desktop-command.mikkel-mynderup.chatgpt.site/api/mcp"
     }
   }
 }

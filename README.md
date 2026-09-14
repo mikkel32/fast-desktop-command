@@ -2,8 +2,8 @@
   <img src="assets/app-icon.png" width="112" alt="FAST lightning icon" />
   <h1>FAST Desktop Command</h1>
   <p><strong>Your Mac. At full speed.</strong></p>
-  <p>A native Swift app and a fast local MCP engine for Codex.</p>
-  <p><a href="https://fast-desktop-command.mikkel-mynderup.chatgpt.site">Website and connection setup</a> / <a href="#get-started">Source build</a> / <a href="docs/PERFORMANCE.md">Measurements</a></p>
+  <p>A native Swift app and a fast MCP engine for Codex and ChatGPT.</p>
+  <p><a href="https://fast-desktop-command.mikkel-mynderup.chatgpt.site">Connect your Mac</a> / <a href="https://github.com/mikkel32/fast-desktop-command/releases/latest">Download the Mac app</a> / <a href="docs/PERFORMANCE.md">Measurements</a></p>
 </div>
 
 ---
@@ -25,7 +25,11 @@ The original MIT license and attribution are preserved.
   app keeps its own process state.
 - **Actual images:** full image bytes, with no quality reduction or stale cache.
 - **Codex integration:** the local plugin connects through the app you control.
-- **Source included:** Swift, TypeScript, regression tests, and benchmark scripts.
+- **ChatGPT web:** sign in on the FAST site, pair the code from your Mac, and
+  connect the OAuth MCP plugin. Your Mac makes the outbound connection.
+- **Native computer tools:** inspect apps and windows, capture a selected window,
+  and optionally enable mouse and keyboard actions in the app.
+- **Source included:** Swift, TypeScript, the Sites worker, tests, and benchmarks.
 
 ## Measured performance
 
@@ -54,6 +58,25 @@ real costs. See [measurement scope and methodology](docs/PERFORMANCE.md).
 
 ## Get started
 
+1. [Download the Mac app](https://github.com/mikkel32/fast-desktop-command/releases/latest),
+   unzip it, and move **Fast Desktop Command.app** to Applications.
+2. Open the app. **Check now** verifies a real command and image read.
+3. For ChatGPT, choose **Connect web**, then sign in and confirm the code on
+   [the FAST site](https://fast-desktop-command.mikkel-mynderup.chatgpt.site).
+4. Add the site's MCP URL as an OAuth plugin in ChatGPT developer mode. Use
+   [the connection guide](docs/PLUGIN.md) for the local Codex plugin or web setup.
+
+The download includes Node and the engine: no terminal setup is required. This
+initial Apple Silicon release requires macOS 14+. It is signed ad hoc and is not
+Apple-notarized; macOS may require you to explicitly approve opening it.
+
+Close the window to keep the app in the menu bar. Stop pauses app-managed clients;
+Disconnect revokes that Mac's active web link locally. Revoke access on the website
+to invalidate its pairing remotely. Native input starts disabled and also requires
+macOS Accessibility permission. Screenshots require Screen Recording permission.
+
+### Build from source
+
 Source builds require macOS 14+, Node.js 20+, and Xcode command-line tools.
 
 ```sh
@@ -73,10 +96,9 @@ Open the app to start. Use **Check now** to verify real commands and image bytes
 Close its window to leave it in the menu bar. **Stop connection** disconnects
 app-managed clients and is respected by the plugin.
 
-For the Codex plugin, see [setup instructions](docs/PLUGIN.md). Start a new Codex
-task after installation. Web pairing and distribution are being prepared on the
-[FAST site](https://fast-desktop-command.mikkel-mynderup.chatgpt.site); local plugin
-installation alone does not create a web connection or public directory listing.
+For a self-contained build, use `python3 scripts/build-macos-app.py --portable`.
+GitHub distribution and a private ChatGPT plugin do not imply approval for the
+public OpenAI directory. That listing requires developer verification and review.
 
 ## Privacy and control
 
@@ -100,6 +122,7 @@ npm run bench:local
 - `macos/`: SwiftUI app, app icon source, and Swift tests.
 - `scripts/`: native connection service, build tools, and benchmarks.
 - `plugins/fast-as-fuck-desktop-command/`: the FAST integration.
+- `website/`: the complete Sites frontend, OAuth server, relay, and migrations.
 
 ## Credits
 

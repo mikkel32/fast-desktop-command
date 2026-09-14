@@ -1,11 +1,10 @@
 {
-  "name": "desktop-commander",
+  "name": "fast-desktop-command",
   "version": "1.5.0",
   "description": "MCP server for terminal commands, process management, and file operations across text, code, PDF, DOCX, Excel, images, and structured data",
   "mcpServers": {
-    "desktop-commander": {
-      "command": "npx",
-      "args": ["-y", "@wonderwhy-er/desktop-commander"]
+    "fast-desktop-command": {
+      "httpUrl": "https://fast-desktop-command.mikkel-mynderup.chatgpt.site/mcp"
     }
   },
   "excludeTools": []

@@ -21,7 +21,7 @@ try {socket=await connect();} catch {
   if(paused) throw new Error('The connection is stopped. Open Fast Desktop Command and click Start connection.');
   if(process.env.FAF_NO_AUTO_OPEN==='1') throw new Error('Open Fast Desktop Command and start the connection.');
   // Opening the native app is the only launch path; never silently start a second service.
-  await new Promise((resolve,reject)=>execFile('/usr/bin/open',['-gj',path.join(root,'Fast Desktop Command.app')],error=>error?reject(error):resolve()));
+  await new Promise((resolve,reject)=>execFile('/usr/bin/open',['-gj',process.env.FAF_APP_BUNDLE || path.join(root,'Fast Desktop Command.app')],error=>error?reject(error):resolve()));
   const deadline=Date.now()+12000;
   while(!socket && Date.now()<deadline) {
     await new Promise(resolve=>setTimeout(resolve,100));

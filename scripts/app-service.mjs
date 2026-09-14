@@ -9,11 +9,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { WebConnection } from './web-connection.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const directory=process.env.FAF_APP_RUNTIME_DIR || path.join(os.homedir(),'.fast-as-fuck-desktop-command','app');
 const socketPath=path.join(directory,'mcp.sock');
 const statePath=path.join(directory,'service.json');
+const web=new WebConnection({root,runtimeDirectory:directory});
 const token=randomBytes(32).toString('hex');
 const sessions=new Map();
 const events=[];
@@ -22,6 +24,7 @@ let checkInFlight;
 let lastCheck=null;
 let version='';
 let toolCount=0;
+let nativeEnabled=false;
 const startedAt=new Date().toISOString();
 const env={...process.env,DESKTOP_COMMANDER_DISABLE_TELEMETRY:'true'};
 const log=(message)=>{events.push({id:randomBytes(6).toString('hex'),time:new Date().toISOString(),message});if(events.length>20)events.shift();};
@@ -47,6 +50,7 @@ await canary.connect(canaryTransport);
 canaryTransport.stderr?.on('data',()=>{});
 version=canary.getServerVersion()?.version || 'unknown';
 toolCount=(await canary.listTools()).tools.length;
+try {nativeEnabled=JSON.parse(await readFile(path.join(process.env.DC_CONFIG_DIR || path.join(os.homedir(),'.fast-as-fuck-desktop-command'),'config.json'),'utf8')).nativeControlEnabled===true;} catch {}
 log('Connection started.');
 
 const text=result=>result.content?.filter(item=>item.type==='text').map(item=>item.text).join('\n') || '';
@@ -122,23 +126,33 @@ const httpServer=createHTTPServer(async(request,response)=>{
   response.setHeader('Content-Type','application/json');
   response.setHeader('Cache-Control','no-store');
   if(!authorized(request)){response.writeHead(401);response.end('{"error":"Unauthorized"}');return;}
+  if(request.url==='/native/enable' && request.method==='POST'){
+    let input='';for await(const chunk of request){input+=chunk;if(input.length>1024){response.writeHead(413);response.end('{}');return;}}
+    try{const data=JSON.parse(input);if(typeof data.enabled!=='boolean')throw Error();const result=await canary.callTool({name:'set_config_value',arguments:{key:'nativeControlEnabled',value:data.enabled}});if(result.isError)throw Error();nativeEnabled=data.enabled;response.end(JSON.stringify({enabled:nativeEnabled}));}catch{response.writeHead(400);response.end('{"error":"Could not update native controls"}');}return;
+  }
+  if(request.url==='/web/pair' && request.method==='POST'){
+    try{response.end(JSON.stringify(await web.pair()));}catch(error){response.writeHead(503);response.end(JSON.stringify({error:error.message}));}return;
+  }
+  if(request.url==='/web/disconnect' && request.method==='POST'){await web.stop(true);response.end(JSON.stringify(web.status()));return;}
   if(request.url==='/check' && request.method==='POST') await fullCheck();
   else if(request.url!=='/health' || request.method!=='GET') {response.writeHead(404);response.end('{}');return;}
   let healthy=false,pingMs=null,error=null;
   try {const start=performance.now();await canary.ping({timeout:2500});pingMs=performance.now()-start;healthy=true;}
   catch(failure){error=failure.message;}
   response.end(JSON.stringify({healthy,pingMs,error,version,toolCount,startedAt,pid:process.pid,
-    clients:[...sessions.values()].map(({id,pid,ready,connectedAt})=>({id,pid,ready,connectedAt})),lastCheck,events}));
+    clients:[...sessions.values()].map(({id,pid,ready,connectedAt})=>({id,pid,ready,connectedAt})),lastCheck,events,web:web.status(),nativeEnabled}));
 });
 await new Promise(resolve=>httpServer.listen(0,'127.0.0.1',resolve));
 await fullCheck();
 await writeFile(statePath,JSON.stringify({pid:process.pid,port:httpServer.address().port,token,socketPath,startedAt}),{mode:0o600});
 await chmod(statePath,0o600);
 process.stdout.write(JSON.stringify({event:'ready',pid:process.pid})+'\n');
+await web.resume();
 
 async function stop() {
   if(closing)return;
   closing=true;
+  await web.stop();
   socketServer.close();
   for(const {socket,child} of sessions.values()){socket.destroy();stopChild(child);}
   httpServer.closeAllConnections();

@@ -11,6 +11,8 @@ public struct ConnectionHealth: Decodable, Equatable, Sendable {
     public let clients: [ConnectedClient]
     public let lastCheck: HealthCheck?
     public let events: [ConnectionEvent]
+    public let web: WebConnectionStatus?
+    public let nativeEnabled: Bool?
 
     public var isReady: Bool { healthy && lastCheck?.healthy != false }
     public var connectedCount: Int { clients.filter(\.ready).count }
@@ -35,6 +37,14 @@ public struct ConnectionHealth: Decodable, Equatable, Sendable {
         guard let value, value.isFinite, value >= 0 else { return "Not checked" }
         return value < 1 ? String(format: "%.2f ms", value) : String(format: "%.1f ms", value)
     }
+}
+
+public struct WebConnectionStatus: Decodable, Equatable, Sendable {
+    public let state: String
+    public let message: String?
+    public let siteURL: String?
+    public let code: String?
+    public let verificationURL: String?
 }
 
 public struct ConnectedClient: Decodable, Equatable, Sendable, Identifiable {

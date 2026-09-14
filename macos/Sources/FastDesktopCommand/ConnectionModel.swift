@@ -24,6 +24,9 @@ final class ConnectionModel {
     private(set) var lastUpdated: Date?
     private(set) var isRunning = false
     private(set) var copied = false
+    private(set) var webStatus: WebConnectionStatus?
+    private(set) var webBusy = false
+    private(set) var nativeEnabled = false
     @ObservationIgnored private var process: Process?
     @ObservationIgnored private var inputPipe: Pipe?
     @ObservationIgnored private var outputPipe: Pipe?
@@ -56,6 +59,9 @@ final class ConnectionModel {
     }
 
     private var runtimeDirectory: URL {
+        if let override = Bundle.main.object(forInfoDictionaryKey: "FAFRuntimeDirectory") as? String {
+            return URL(fileURLWithPath: override)
+        }
         if let override = ProcessInfo.processInfo.environment["FAF_APP_RUNTIME_DIR"] {
             return URL(fileURLWithPath: override)
         }
@@ -67,7 +73,11 @@ final class ConnectionModel {
         guard let url = Bundle.main.url(forResource: "Runtime", withExtension: "json") else {
             throw CocoaError(.fileNoSuchFile, userInfo: [NSLocalizedDescriptionKey: "The app is missing its engine configuration. Rebuild the app from the project."])
         }
-        return try JSONDecoder().decode(RuntimeConfiguration.self, from: Data(contentsOf: url))
+        let raw = try JSONDecoder().decode(RuntimeConfiguration.self, from: Data(contentsOf: url))
+        func resolve(_ value: String) -> String {
+            value.hasPrefix("/") ? value : url.deletingLastPathComponent().appendingPathComponent(value).path
+        }
+        return RuntimeConfiguration(node: resolve(raw.node), project: resolve(raw.project))
     }
 
     func startOnLaunch() {
@@ -87,6 +97,10 @@ final class ConnectionModel {
         do {
             try? FileManager.default.removeItem(at: runtimeDirectory.appendingPathComponent("paused"))
             let config = try configuration()
+            try FileManager.default.createDirectory(at: runtimeDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            let descriptor = ["Node": config.node, "Engine": config.project, "App": Bundle.main.bundleURL.path]
+            let plist = try PropertyListSerialization.data(fromPropertyList: descriptor, format: .xml, options: 0)
+            try plist.write(to: runtimeDirectory.appendingPathComponent("runtime.plist"), options: .atomic)
             guard FileManager.default.isExecutableFile(atPath: config.node),
                   FileManager.default.fileExists(atPath: config.project + "/dist/local.js") else {
                 throw CocoaError(.fileNoSuchFile, userInfo: [NSLocalizedDescriptionKey: "The engine is missing. Open the project and build it again."])
@@ -98,8 +112,12 @@ final class ConnectionModel {
             var environment = ProcessInfo.processInfo.environment
             environment["FAF_APP_RUNTIME_DIR"] = runtimeDirectory.path
             environment["DESKTOP_COMMANDER_DISABLE_TELEMETRY"] = "true"
+            environment["FAF_APP_BUNDLE"] = Bundle.main.bundleURL.path
+            environment["FAF_NATIVE_HELPER"] = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/NativeControl").path
+            if let value = Bundle.main.object(forInfoDictionaryKey: "FAFConfigDirectory") as? String { environment["DC_CONFIG_DIR"] = value }
+            if let value = Bundle.main.object(forInfoDictionaryKey: "FAFDeviceName") as? String { environment["FAF_DEVICE_NAME"] = value }
             // GUI apps have a smaller PATH; keep the user's tools available.
-            environment["PATH"] = [FileManager.default.homeDirectoryForCurrentUser.path + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", environment["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"].joined(separator: ":")
+            environment["PATH"] = [URL(fileURLWithPath: config.node).deletingLastPathComponent().path, FileManager.default.homeDirectoryForCurrentUser.path + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", environment["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"].joined(separator: ":")
             child.environment = environment
             let input = Pipe(), output = Pipe(), errors = Pipe()
             child.standardInput = input
@@ -226,6 +244,8 @@ final class ConnectionModel {
             let value = try JSONDecoder().decode(ConnectionHealth.self, from: data)
             guard generation == thisGeneration else { return }
             health = value
+            webStatus = value.web
+            nativeEnabled = value.nativeEnabled ?? false
             lastUpdated = Date()
             message = nil
             phase = value.isReady ? .ready : .attention
@@ -246,5 +266,50 @@ final class ConnectionModel {
 
     func openProject() {
         if let config = try? configuration() { NSWorkspace.shared.open(URL(fileURLWithPath: config.project)) }
+    }
+
+    func pairWeb() async {
+        guard let endpoint, !webBusy else { return }
+        webBusy = true
+        defer { webBusy = false }
+        do {
+            var request = URLRequest(url: URL(string: "http://127.0.0.1:\(endpoint.port)/web/pair")!, timeoutInterval: 15)
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(endpoint.token)", forHTTPHeaderField: "Authorization")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+            let state = try JSONDecoder().decode(WebConnectionStatus.self, from: data)
+            webStatus = state
+            if let string = state.verificationURL, let url = URL(string: string), url.scheme == "https",
+               url.host == "fast-desktop-command.mikkel-mynderup.chatgpt.site" { NSWorkspace.shared.open(url) }
+        } catch { message = "Web pairing is unavailable. Check the website and try again." }
+    }
+
+    func disconnectWeb() async {
+        guard let endpoint else { return }
+        var request = URLRequest(url: URL(string: "http://127.0.0.1:\(endpoint.port)/web/disconnect")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(endpoint.token)", forHTTPHeaderField: "Authorization")
+        _ = try? await URLSession.shared.data(for: request)
+        await refresh()
+    }
+
+    func setNativeEnabled(_ enabled: Bool) async {
+        guard let endpoint else { return }
+        var request = URLRequest(url: URL(string: "http://127.0.0.1:\(endpoint.port)/native/enable")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(endpoint.token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["enabled": enabled])
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+            nativeEnabled = enabled
+        } catch { message = "Could not change native controls. Try again." }
+    }
+
+    func openPermissions(screen: Bool) {
+        let destination = screen ? "Privacy_ScreenCapture" : "Privacy_Accessibility"
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?\(destination)")!)
     }
 }

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "fast_desktop_command": {
+      "command": "/bin/sh",
+      "args": [
+        "./scripts/connect.sh"
+      ],
+      "cwd": ".",
+      "env": {
+        "DESKTOP_COMMANDER_DISABLE_TELEMETRY": "true"
+      }
+    }
+  }
+}

@@ -11,6 +11,7 @@ if (!manifestPath) throw new Error('Pass the installed .mcp.json path');
 const root = fileURLToPath(new URL('../', import.meta.url));
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 const launch = manifest.mcpServers.fast_desktop_command;
+launch.cwd = path.resolve(path.dirname(manifestPath), launch.cwd || '.');
 assert(launch, 'installed server is missing');
 const client = new Client({name:'faf-installed-plugin-smoke', version:'1.0.0'});
 const transport = new StdioClientTransport({...launch, env:{...process.env,...launch.env}, stderr:'pipe'});
@@ -30,7 +31,7 @@ try {
   transport.stderr?.on('data', () => {});
   receipt.server = client.getServerVersion();
   assert.equal(receipt.server.name, 'fast-as-fuck-desktop-command');
-  assert.equal(receipt.server.version, '0.2.50+faf.3');
+  assert.equal(receipt.server.version, '1.0.0');
   const listStart = performance.now();
   const tools = await client.listTools();
   receipt.discoveryMs = performance.now()-listStart;
@@ -38,7 +39,7 @@ try {
   assert(receipt.toolNames.includes('edit_block'));
   await call('list_sessions', {});
   const packageResult = await call('read_file', {path:path.join(root,'package.json'), length:8});
-  assert.match(text(packageResult), /desktop-commander/);
+  assert.match(text(packageResult), /fast-desktop-command/);
   const smokeDir = path.join(root,'benchmarks',`smoke-${Date.now()}`);
   await call('create_directory', {path:smokeDir});
   const file = path.join(smokeDir,'proof.txt');

@@ -88,7 +88,25 @@ struct ConnectionView: View {
                 Text("Stopping disconnects active apps.").font(.system(size: 10)).foregroundStyle(Palette.secondary).padding(.top, 8)
             }
 
-            DisclosureGroup("Details", isExpanded: $showDetails) {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Label("Web connection", systemImage: "globe").font(.system(size: 12, weight: .medium))
+                    Spacer()
+                    if model.webStatus?.state == "connected" {
+                        Button("Disconnect") { Task { await model.disconnectWeb() } }
+                    } else {
+                        Button(model.webBusy ? "Connecting..." : "Connect web") { Task { await model.pairWeb() } }
+                            .disabled(!model.isRunning || model.webBusy)
+                    }
+                }.buttonStyle(.link).tint(Palette.lime)
+                if let code = model.webStatus?.code, model.webStatus?.state == "pairing" {
+                    Text(code).font(.system(size: 22, weight: .semibold, design: .monospaced)).tracking(3).foregroundStyle(Palette.lime).textSelection(.enabled)
+                }
+                Text(model.webStatus?.message ?? "Pair this Mac to use it from ChatGPT on the web.")
+                    .font(.system(size: 11)).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
+            }.padding(15).background(Palette.panel, in: .rect(cornerRadius: 12)).padding(.top, 20)
+
+            DisclosureGroup("Details & permissions", isExpanded: $showDetails) {
                 VStack(alignment: .leading, spacing: 9) {
                     Text("\(model.health?.toolCount ?? 0) tools  ·  \(model.health?.version ?? "Engine not started")")
                         .font(.system(size: 11, design: .monospaced))
@@ -101,13 +119,19 @@ struct ConnectionView: View {
                         Button(model.copied ? "Copied" : "Copy diagnostics", action: model.copyDiagnostics)
                         Button("Open project", action: model.openProject)
                     }.font(.system(size: 11)).buttonStyle(.link).tint(Palette.lime).padding(.top, 3)
+                    Toggle("Allow mouse and keyboard controls", isOn: Binding(get: { model.nativeEnabled }, set: { value in Task { await model.setNativeEnabled(value) } }))
+                        .toggleStyle(.switch).controlSize(.small).font(.system(size: 11)).disabled(!model.isRunning)
+                    HStack(spacing: 16) {
+                        Button("Accessibility permission") { model.openPermissions(screen: false) }
+                        Button("Screen Recording") { model.openPermissions(screen: true) }
+                    }.font(.system(size: 11)).buttonStyle(.link).tint(Palette.lime)
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 10)
             }
             .font(.system(size: 11)).foregroundStyle(Palette.secondary).tint(Palette.secondary)
             .padding(.top, 24)
             HStack(spacing: 5) {
                 Image(systemName: "lock.shield").font(.system(size: 10))
-                Text("Only on this Mac").font(.system(size: 10))
+                Text(model.webStatus?.state == "connected" ? "Paired to your account" : "Local by default").font(.system(size: 10))
                 Spacer()
                 Text("Stays in your menu bar").font(.system(size: 10))
             }.foregroundStyle(Palette.secondary.opacity(0.8)).padding(.top, 21)
@@ -135,7 +159,7 @@ struct ConnectionView: View {
                 Text("Desktop Command").font(.system(size: 11)).foregroundStyle(Palette.secondary)
             }
             Spacer()
-            Text("LOCAL").font(.system(size: 9, weight: .semibold, design: .monospaced)).tracking(1)
+            Text(model.webStatus?.state == "connected" ? "CONNECTED" : "LOCAL").font(.system(size: 9, weight: .semibold, design: .monospaced)).tracking(1)
                 .foregroundStyle(Palette.secondary).padding(.horizontal, 9).padding(.vertical, 5)
                 .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
         }

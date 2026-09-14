@@ -1,36 +1,36 @@
 {
   "$schema": "../../dist/mcpb-manifest.schema.json",
   "manifest_version": "0.3",
-  "name": "desktop-commander",
-  "display_name": "Desktop Commander",
+  "name": "fast-desktop-command",
+  "display_name": "FAST Desktop Command",
   "version": "{{VERSION}}",
   "description": "Build, explore, and automate on your local machine with access to files and terminal.",
   "long_description": "Combine local filesystem access with full terminal control to handle technical tasks through natural language. Desktop Commander empowers you to build, explore, and automate - from organizing repositories to creating complete applications:\n* **Build from scratch** - Create features and applications with simple commands\n* **Manage development environments** - Set up servers, configure systems, and handle processes\n* **Manage context and documentation** - Keep track of project details and technical specifications\n* **Explore existing codebases and projects** - Navigate and understand complex repositories\n\nThis extension bridges technical skill gaps by providing full command-line superpowers through an interface that understands your intent and handles complexity automatically.",
   "author": {
-    "name": "Desktop Commander Team",
-    "email": "er@desktopcommander.app",
-    "url": "https://desktopcommander.app/"
+    "name": "Mikkel Mynderup",
+    "url": "https://github.com/mikkel32"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/wonderwhy-er/DesktopCommanderMCP.git"
   },
-  "homepage": "https://github.com/wonderwhy-er/DesktopCommanderMCP",
+  "homepage": "https://fast-desktop-command.mikkel-mynderup.chatgpt.site",
   "documentation": "https://github.com/wonderwhy-er/DesktopCommanderMCP/blob/main/FAQ.md",
-  "support": "https://github.com/wonderwhy-er/DesktopCommanderMCP/issues",
-  "privacy_policies": ["https://legal.desktopcommander.app/privacy_desktop_commander_mcp"],
+  "support": "https://github.com/mikkel32/fast-desktop-command/issues",
+  "privacy_policies": [
+    "https://fast-desktop-command.mikkel-mynderup.chatgpt.site/privacy"
+  ],
   "icon": "icon.png",
   "server": {
     "type": "node",
-    "entry_point": "dist/index.js",
+    "entry_point": "dist/local.js",
     "mcp_config": {
       "command": "node",
       "args": [
-        "${__dirname}/dist/index.js"
+        "${__dirname}/dist/local.js"
       ],
       "env": {
-        "MCP_DXT": "true",
-        "NODE_ENV": "production"
+        "DESKTOP_COMMANDER_DISABLE_TELEMETRY": "true"
       }
     }
   },
@@ -142,7 +142,7 @@
   ],
   "keywords": [
     "orchestration",
-    "workflow", 
+    "workflow",
     "development",
     "prototyping",
     "terminal",

@@ -80,6 +80,7 @@ import {
 } from './ui/contracts.js';
 import { listUiResources, readUiResource } from './ui/resources.js';
 import { shouldShowMcpUiPreviews } from './utils/mcp-ui-ab-test.js';
+import {nativeTools,nativeTool} from './tools/native.js';
 
 // Store startup messages to send after initialization
 const deferredMessages: Array<{ level: string, message: string }> = [];
@@ -99,7 +100,7 @@ deferLog('info', 'Loading server.ts');
 
 const SERVER_INFO = {
     name: process.env.DC_LOCAL_PLUGIN === 'true' ? 'fast-as-fuck-desktop-command' : 'desktop-commander',
-    version: process.env.DC_LOCAL_PLUGIN === 'true' ? `${VERSION}+faf.3` : VERSION,
+    version: VERSION,
 };
 
 export const server = new Server(
@@ -305,6 +306,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
         // Build complete tools array
         const allTools = [
+            ...nativeTools,
             // Configuration tools
             {
                 name: "get_config",
@@ -1328,6 +1330,10 @@ async function handleCallToolRequest(request: CallToolRequest): Promise<ServerRe
         // (result is declared above so the finally block can read execution status)
 
         switch (name) {
+            case 'native_permissions': case 'native_apps': case 'native_windows':
+            case 'native_screenshot': case 'native_click': case 'native_type': case 'native_key':
+                result=await nativeTool(name,args);
+                break;
             // Config tools
             case "get_config":
                 try {

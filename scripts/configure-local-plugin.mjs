@@ -27,10 +27,10 @@ try {
 } catch (error) { if (error.code !== 'ENOENT') throw error; }
 await writeFile(path.join(plugin, '.mcp.json'), JSON.stringify({mcpServers: {
   fast_desktop_command: {
-    command: process.execPath,
-    args: [path.join(root, 'scripts', 'app-connect.mjs')],
-    cwd: root,
-    env: {DESKTOP_COMMANDER_DISABLE_TELEMETRY: 'true', FAF_APP_RUNTIME_DIR: path.join(os.homedir(), '.fast-as-fuck-desktop-command', 'app')},
+    command: '/bin/sh',
+    args: ['./scripts/connect.sh'],
+    cwd: '.',
+    env: {DESKTOP_COMMANDER_DISABLE_TELEMETRY: 'true'},
   },
 }}, null, 2) + '\n');
 console.log(`Configured ${name} against ${root}`);

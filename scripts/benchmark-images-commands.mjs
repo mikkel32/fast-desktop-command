@@ -13,6 +13,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const [manifestPath,report='benchmarks/images-commands.json']=process.argv.slice(2);
 assert(manifestPath,'Pass installed .mcp.json');
 const launch=JSON.parse(await readFile(manifestPath,'utf8')).mcpServers.fast_desktop_command;
+launch.cwd=path.resolve(path.dirname(manifestPath),launch.cwd||'.');
 const scratch=await realpath(await mkdtemp(path.join(os.tmpdir(),'faf-media-benchmark-')));
 const configDir=path.join(scratch,'config');
 await mkdir(configDir);

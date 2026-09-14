@@ -49,6 +49,7 @@ let launch = { command: process.execPath, args: [path.resolve(root, entry), '--n
 if (entry.endsWith('.mcp.json')) {
   const manifest = JSON.parse(await readFile(entry, 'utf8'));
   launch = Object.values(manifest.mcpServers)[0];
+  launch.cwd = path.resolve(path.dirname(entry), launch.cwd || '.');
 }
 const client = new Client({ name: 'faf-desktop-command-benchmark', version: '1.0.0' });
 const transport = new StdioClientTransport({ ...launch, stderr: 'pipe', env: {

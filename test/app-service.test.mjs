@@ -56,9 +56,9 @@ test('app controls real MCP clients, verifies health, isolates sessions, and res
     assert.equal((await fetch(`http://127.0.0.1:${state.port}/health`)).status,401);
     let status=await health(state,true);
     assert(status.healthy && status.lastCheck.healthy);
-    assert.equal(status.toolCount,26);
+    assert.equal(status.toolCount,33);
     const first=await connect(),second=await connect();
-    assert.equal((await first.listTools()).tools.length,26);
+    assert.equal((await first.listTools()).tools.length,33);
     status=await health(state);
     assert.equal(status.clients.filter(c=>c.ready).length,2);
     const started=await first.callTool({name:'start_process',arguments:{command:'node -i',shell:'/bin/sh',timeout_ms:1000}});

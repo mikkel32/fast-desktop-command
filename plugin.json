@@ -1,14 +1,13 @@
 {
-  "name": "desktop-commander",
-  "description": "MCP server for terminal commands, process management, and file operations across text, code, PDF, DOCX, Excel, images, and structured data",
-  "version": "1.5.0",
+  "name": "fast-desktop-command",
+  "description": "Native Mac tools and authenticated web connections for Codex and ChatGPT",
+  "version": "1.0.0",
   "author": {
-    "name": "Desktop Commander",
-    "email": "es@desktopcommander.app",
-    "url": "https://desktopcommander.app"
+    "name": "Mikkel Mynderup",
+    "url": "https://github.com/mikkel32"
   },
-  "homepage": "https://desktopcommander.app",
-  "repository": "https://github.com/wonderwhy-er/DesktopCommanderMCP",
+  "homepage": "https://fast-desktop-command.mikkel-mynderup.chatgpt.site",
+  "repository": "https://github.com/mikkel32/fast-desktop-command",
   "license": "MIT",
   "keywords": [
     "shell",
@@ -21,6 +20,6 @@
     "mcp",
     "desktop-commander"
   ],
-  "skills": "./skills/",
+  "skills": "./plugins/fast-as-fuck-desktop-command/skills/",
   "mcpServers": ".mcp.json"
 }
