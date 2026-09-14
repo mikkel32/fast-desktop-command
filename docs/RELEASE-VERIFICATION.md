@@ -44,6 +44,12 @@ the current saved input preference on every call, and requires foreground access
 before keyboard or raw mouse events. End-to-end button completion is validated
 against the app's health-check record rather than the event-posting receipt.
 
+The installed 1.0.1 app passed that stronger check: `native_click` returned
+`delivery: accessibility`, and the completed check timestamp advanced from
+`2026-09-14T18:47:57.506Z` to `2026-09-14T18:49:30.856Z`. The harness compared the
+authenticated health records and confirmed `checkRan: true` and `healthy: true`.
+A new screenshot preceded the input in the same MCP client session.
+
 The first endpoint used `/mcp`, which the hosting service intercepted. The public
 FAST endpoint is `/api/mcp`. Tool discovery is public metadata; executing a tool
 requires OAuth and account/device ownership. An older conversation rejected the
