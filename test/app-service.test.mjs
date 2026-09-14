@@ -67,6 +67,13 @@ test('app controls real MCP clients, verifies health, isolates sessions, and res
       assert.equal(response.status,200);
       assert.equal((await health(state)).nativeEnabled,enabled);
       assert.equal(JSON.parse(await readFile(path.join(directory,'config/config.json'),'utf8')).nativeControlEnabled,enabled);
+      if(enabled && process.platform==='darwin'){
+        const untouched=await connect();
+        const noTarget=await untouched.callTool({name:'native_click',arguments:{x:0,y:0}});
+        assert.equal(noTarget.isError,true);
+        assert.match(noTarget.content[0].text,/Capture the target window/);
+        await untouched.close();
+      }
     }
     const toolChange=await first.callTool({name:'set_config_value',arguments:{key:'nativeControlEnabled',value:true}});
     assert.equal(toolChange.isError,true);

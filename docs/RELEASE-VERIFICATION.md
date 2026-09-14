@@ -2,7 +2,8 @@
 
 Initial app source: `60ff9102d091d10fbbb5dad7cbe0059ebf517875` (1.0.0).
 The 1.0.1 follow-up fixes the app-owned native-input toggle and keeps the native
-helper out of the running-app list. The packaged app version follows package.json.
+helper out of the running-app list. Native operations use the app executable's
+own permission identity. The packaged app version follows package.json.
 Sites source: `87d4d927d5dd371a77514f1fc297d95bbd4b5ed5`.
 
 ## Observed on Apple Silicon
@@ -32,6 +33,16 @@ Using the private FAST plugin in a fresh conversation:
 6. The installed app reported Accessibility and Screen Recording as unavailable.
    `native_screenshot` returned the explicit permission error. No OS permissions
    or native input settings were changed during this test.
+7. After user authorization and macOS approval, the installed app reported both
+   permissions as granted and ChatGPT received real 920 x 1470 window screenshots.
+
+A first mouse-event test returned a successful posting receipt, but the app's
+health-check completion timestamp did not advance. A changed ping measurement
+alone did not verify the button action. The final implementation uses a native
+Accessibility press for buttons, binds input to a recent captured window, checks
+the current saved input preference on every call, and requires foreground access
+before keyboard or raw mouse events. End-to-end button completion is validated
+against the app's health-check record rather than the event-posting receipt.
 
 The first endpoint used `/mcp`, which the hosting service intercepted. The public
 FAST endpoint is `/api/mcp`. Tool discovery is public metadata; executing a tool
@@ -44,7 +55,8 @@ developer MCP, so testing followed OpenAI's documented Refresh / Try in chat flo
 - Native app-service integration passed with 33 local tools.
 - The 1.0.1 regression check verifies authenticated UI toggles persist, anonymous
   toggles fail, agents cannot change that setting through `set_config_value`, and
-  disabled input returns its explicit error before posting a native event.
+  disabled input returns its explicit error immediately. New sessions cannot
+  send native input without first capturing a target window.
 - Three Swift health/state tests passed.
 - Sites tests passed for pairing, PKCE, account isolation, request deduplication,
   reconnect continuity, token refresh, revocation, and anonymous execution denial.

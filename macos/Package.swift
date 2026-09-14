@@ -7,8 +7,9 @@ let package = Package(
     products: [.executable(name: "FastDesktopCommand", targets: ["FastDesktopCommand"]), .executable(name: "NativeControl", targets: ["NativeControl"])],
     targets: [
         .target(name: "ConnectionCore"),
-        .executableTarget(name: "FastDesktopCommand", dependencies: ["ConnectionCore"]),
-        .executableTarget(name: "NativeControl"),
+        .target(name: "NativeControlCore"),
+        .executableTarget(name: "FastDesktopCommand", dependencies: ["ConnectionCore", "NativeControlCore"]),
+        .executableTarget(name: "NativeControl", dependencies: ["NativeControlCore"]),
         .testTarget(name: "ConnectionCoreTests", dependencies: ["ConnectionCore"])
     ]
 )

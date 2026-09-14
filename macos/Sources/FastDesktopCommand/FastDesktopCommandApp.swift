@@ -1,5 +1,16 @@
 import SwiftUI
 import AppKit
+import NativeControlCore
+
+@main enum FastDesktopCommandLauncher {
+    @MainActor static func main() async {
+        if CommandLine.arguments.contains("--native") {
+            await NativeControlRunner.run()
+        } else {
+            FastDesktopCommandApp.main()
+        }
+    }
+}
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     var connection: ConnectionModel?
@@ -7,7 +18,6 @@ import AppKit
     func applicationWillTerminate(_ notification: Notification) { connection?.stop() }
 }
 
-@main
 struct FastDesktopCommandApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @State private var connection = ConnectionModel()

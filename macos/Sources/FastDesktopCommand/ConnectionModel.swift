@@ -113,7 +113,7 @@ final class ConnectionModel {
             environment["FAF_APP_RUNTIME_DIR"] = runtimeDirectory.path
             environment["DESKTOP_COMMANDER_DISABLE_TELEMETRY"] = "true"
             environment["FAF_APP_BUNDLE"] = Bundle.main.bundleURL.path
-            environment["FAF_NATIVE_HELPER"] = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/NativeControl").path
+            environment["FAF_NATIVE_HELPER"] = Bundle.main.executableURL!.path
             if let value = Bundle.main.object(forInfoDictionaryKey: "FAFConfigDirectory") as? String { environment["DC_CONFIG_DIR"] = value }
             if let value = Bundle.main.object(forInfoDictionaryKey: "FAFDeviceName") as? String { environment["FAF_DEVICE_NAME"] = value }
             // GUI apps have a smaller PATH; keep the user's tools available.

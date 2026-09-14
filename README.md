@@ -10,6 +10,8 @@
 
 Start the connection. Check its health. Get on with your work.
 
+<p align="center"><img src="assets/mac-app.png" width="460" alt="FAST native Mac app showing its connection and command/image health" /></p>
+
 FAST gives Codex local files, images, search, shell commands, and persistent
 processes, with a compact native macOS control panel. It is a performance-focused
 fork of [Desktop Commander](https://github.com/wonderwhy-er/DesktopCommanderMCP).
