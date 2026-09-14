@@ -68,8 +68,18 @@ public enum NativeControlRunner {
             }]
         }
         if operation == "windows" {
-            let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
             let pid = args["pid"] as? Int
+            if CGPreflightScreenCaptureAccess() {
+                let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
+                return ["screenRecording": true, "windows": content.windows.filter {
+                    $0.windowLayer == 0 && (pid == nil || Int($0.owningApplication?.processID ?? 0) == pid)
+                }.map {
+                    ["id": $0.windowID, "pid": $0.owningApplication?.processID ?? 0,
+                     "app": $0.owningApplication?.applicationName ?? "", "title": $0.title ?? "",
+                     "bounds": ["X": $0.frame.minX, "Y": $0.frame.minY, "Width": $0.frame.width, "Height": $0.frame.height]] as [String: Any]
+                }]
+            }
+            let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
             return ["windows": windows.filter { ($0[kCGWindowLayer as String] as? Int) == 0 && (pid == nil || $0[kCGWindowOwnerPID as String] as? Int == pid) }.map {
                 ["id": $0[kCGWindowNumber as String] ?? 0, "pid": $0[kCGWindowOwnerPID as String] ?? 0,
                  "app": $0[kCGWindowOwnerName as String] ?? "", "title": $0[kCGWindowName as String] ?? "",
@@ -79,7 +89,7 @@ public enum NativeControlRunner {
         if operation == "screenshot" {
             guard CGPreflightScreenCaptureAccess() else { throw NativeFailure(message: "Screen Recording permission is required. Enable it for Fast Desktop Command in System Settings; then try again.") }
             guard let identifier = args["windowId"] as? UInt32 else { throw NativeFailure(message: "Choose a windowId from native_windows.") }
-            let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+            let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
             guard let window = content.windows.first(where: { $0.windowID == identifier }) else { throw NativeFailure(message: "The selected window is no longer available. Refresh native_windows.") }
             let filter = SCContentFilter(desktopIndependentWindow: window)
             let config = SCStreamConfiguration()
