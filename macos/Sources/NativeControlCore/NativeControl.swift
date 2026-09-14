@@ -147,10 +147,28 @@ public enum NativeControlRunner {
                     }
                 }
             }
+            // The captured window identifies the intended app. Activate only
+            // that app when it cannot expose a background Accessibility action.
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier != pid {
+                guard NSRunningApplication(processIdentifier: pid)?.activate(options: [.activateIgnoringOtherApps]) == true else {
+                    throw NativeFailure(message: "Could not bring the captured app forward. Open it and capture the window again.")
+                }
+                try await Task.sleep(for: .milliseconds(150))
+            }
             let visible = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] ?? []
             guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
                   visible.contains(where: { ($0[kCGWindowNumber as String] as? UInt32) == windowID }) else {
                 throw NativeFailure(message: "No native button action was available, and the captured app is no longer foreground. Bring it forward and capture it again before a mouse event.")
+            }
+            let app = AXUIElementCreateApplication(pid)
+            guard let axWindow = (axAttribute(app, kAXWindowsAttribute) as? [AXUIElement] ?? []).first(where: { axFrame($0) == targetBounds }) else {
+                throw NativeFailure(message: "The target window changed during activation. Capture it again before input.")
+            }
+            if !right {
+                var budget = 256
+                if pressTarget(axWindow, at: point, budget: &budget) {
+                    return ["clicked": true, "delivery": "accessibility", "windowId": windowID, "x": x, "y": y]
+                }
             }
             guard let move = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left),
                   let down = CGEvent(mouseEventSource: source, mouseType: right ? .rightMouseDown : .leftMouseDown, mouseCursorPosition: point, mouseButton: right ? .right : .left),

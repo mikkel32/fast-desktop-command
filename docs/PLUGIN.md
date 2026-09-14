@@ -41,8 +41,10 @@ The relay and Internet round trip add latency beyond the local benchmarks.
 
 Before native input, capture the target window in the same tool session. FAST
 binds input to that window and verifies that it has not moved or closed. Native
-button presses use Accessibility within the captured window; keyboard and raw
-mouse events also require its app to be foreground. Read the result and verify
+button presses use Accessibility within the captured window. When a click needs
+focus, FAST activates only that captured app, rechecks its window, and tries the
+native button action again. Keyboard and raw mouse events require its app to be
+foreground. Read the result and verify
 the actual UI effect. Ad hoc rebuilds may require removing and re-adding FAST in
 macOS Privacy & Security because its code signature changes.
 

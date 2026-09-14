@@ -50,6 +50,14 @@ The installed 1.0.1 app passed that stronger check: `native_click` returned
 authenticated health records and confirmed `checkRan: true` and `healthy: true`.
 A new screenshot preceded the input in the same MCP client session.
 
+Window listing and capture now use the same macOS window inventory, including
+background windows. A later test began with the installed app in the background.
+FAST captured its window, activated that same app when its button needed focus,
+rechecked the target, and returned `delivery: accessibility`. The completed check
+advanced from `2026-09-14T19:35:28.769Z` to `2026-09-14T19:39:02.068Z`, with
+`checkRan: true` and `healthy: true`. A raw event is not sent while another app
+is foreground, and a changed target window requires a new capture.
+
 The first endpoint used `/mcp`, which the hosting service intercepted. The public
 FAST endpoint is `/api/mcp`. Tool discovery is public metadata; executing a tool
 requires OAuth and account/device ownership. An older conversation rejected the
