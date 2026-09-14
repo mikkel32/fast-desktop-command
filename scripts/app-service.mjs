@@ -128,7 +128,16 @@ const httpServer=createHTTPServer(async(request,response)=>{
   if(!authorized(request)){response.writeHead(401);response.end('{"error":"Unauthorized"}');return;}
   if(request.url==='/native/enable' && request.method==='POST'){
     let input='';for await(const chunk of request){input+=chunk;if(input.length>1024){response.writeHead(413);response.end('{}');return;}}
-    try{const data=JSON.parse(input);if(typeof data.enabled!=='boolean')throw Error();const result=await canary.callTool({name:'set_config_value',arguments:{key:'nativeControlEnabled',value:data.enabled}});if(result.isError)throw Error();nativeEnabled=data.enabled;response.end(JSON.stringify({enabled:nativeEnabled}));}catch{response.writeHead(400);response.end('{"error":"Could not update native controls"}');}return;
+    try {
+      const data=JSON.parse(input);if(typeof data.enabled!=='boolean')throw Error();
+      // This preference belongs to the authenticated local app UI. It is
+      // intentionally unavailable through the agent-facing config tool.
+      const {configManager}=await import(path.join(root,'dist/config-manager.js'));
+      await configManager.setValue('nativeControlEnabled',data.enabled);
+      nativeEnabled=data.enabled;
+      response.end(JSON.stringify({enabled:nativeEnabled}));
+    } catch {response.writeHead(400);response.end('{"error":"Could not update native controls"}');}
+    return;
   }
   if(request.url==='/web/pair' && request.method==='POST'){
     try{response.end(JSON.stringify(await web.pair()));}catch(error){response.writeHead(503);response.end(JSON.stringify({error:error.message}));}return;

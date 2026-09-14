@@ -25,7 +25,8 @@ the portable local plugin configuration for development.
 
    `https://fast-desktop-command.mikkel-mynderup.chatgpt.site/api/mcp`
 
-4. Connect your account, then select FAST in a chat. Start by asking it to call
+4. Connect your account, refresh its tools, then choose **Try in chat** to start a
+   fresh conversation. Start by asking it to call
    `list_devices` and run `printf 'FAST_WEB_OK\n'` on the intended online Mac.
 
 The web plugin exposes 32 tools, including device selection and pending-request

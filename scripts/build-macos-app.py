@@ -13,6 +13,7 @@ parser.add_argument('--output')
 options = parser.parse_args()
 
 root = pathlib.Path(__file__).resolve().parent.parent
+version = json.loads((root / 'package.json').read_text())['version']
 package = root / 'macos'
 subprocess.run(['swift', 'build', '--package-path', str(package), '-c', 'release'], check=True)
 binary_dir = pathlib.Path(subprocess.check_output(['swift', 'build', '--package-path', str(package), '-c', 'release', '--show-bin-path'], text=True).strip())
@@ -53,7 +54,7 @@ if options.portable:
 info = {
     'CFBundleName': 'Fast Desktop Command', 'CFBundleDisplayName': 'Fast Desktop Command',
     'CFBundleIdentifier': 'dk.mikkel.fast-desktop-command', 'CFBundleExecutable': 'FastDesktopCommand',
-    'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': '1.0', 'CFBundleVersion': '1',
+    'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': version, 'CFBundleVersion': version,
     'CFBundleIconFile': 'AppIcon', 'LSMinimumSystemVersion': '14.0',
     'NSHighResolutionCapable': True, 'NSPrincipalClass': 'NSApplication',
     'NSAppTransportSecurity': {'NSAllowsLocalNetworking': True},

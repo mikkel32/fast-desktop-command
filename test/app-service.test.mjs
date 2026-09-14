@@ -59,6 +59,20 @@ test('app controls real MCP clients, verifies health, isolates sessions, and res
     assert.equal(status.toolCount,33);
     const first=await connect(),second=await connect();
     assert.equal((await first.listTools()).tools.length,33);
+    assert.equal(status.nativeEnabled,false);
+    const nativeURL=`http://127.0.0.1:${state.port}/native/enable`;
+    assert.equal((await fetch(nativeURL,{method:'POST',body:JSON.stringify({enabled:true})})).status,401);
+    for(const enabled of [true,false]){
+      const response=await fetch(nativeURL,{method:'POST',headers:{Authorization:`Bearer ${state.token}`},body:JSON.stringify({enabled})});
+      assert.equal(response.status,200);
+      assert.equal((await health(state)).nativeEnabled,enabled);
+      assert.equal(JSON.parse(await readFile(path.join(directory,'config/config.json'),'utf8')).nativeControlEnabled,enabled);
+    }
+    const toolChange=await first.callTool({name:'set_config_value',arguments:{key:'nativeControlEnabled',value:true}});
+    assert.equal(toolChange.isError,true);
+    const blockedInput=await first.callTool({name:'native_key',arguments:{key:'escape'}});
+    assert.equal(blockedInput.isError,true);
+    assert.match(blockedInput.content[0].text,/Native input is disabled/);
     status=await health(state);
     assert.equal(status.clients.filter(c=>c.ready).length,2);
     const started=await first.callTool({name:'start_process',arguments:{command:'node -i',shell:'/bin/sh',timeout_ms:1000}});

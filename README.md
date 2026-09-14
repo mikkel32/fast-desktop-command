@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/app-icon.png" width="112" alt="FAST lightning icon" />
+  <a href="https://fast-desktop-command.mikkel-mynderup.chatgpt.site"><img src="assets/app-icon.png" width="112" alt="FAST lightning icon - connect your Mac" /></a>
   <h1>FAST Desktop Command</h1>
   <p><strong>Your Mac. At full speed.</strong></p>
   <p>A native Swift app and a fast MCP engine for Codex and ChatGPT.</p>
@@ -63,7 +63,8 @@ real costs. See [measurement scope and methodology](docs/PERFORMANCE.md).
 2. Open the app. **Check now** verifies a real command and image read.
 3. For ChatGPT, choose **Connect web**, then sign in and confirm the code on
    [the FAST site](https://fast-desktop-command.mikkel-mynderup.chatgpt.site).
-4. Add the site's MCP URL as an OAuth plugin in ChatGPT developer mode. Use
+4. Add the site's MCP URL as an OAuth plugin in ChatGPT developer mode, then use
+   **Try in chat** to start a fresh conversation. Use
    [the connection guide](docs/PLUGIN.md) for the local Codex plugin or web setup.
 
 The download includes Node and the engine: no terminal setup is required. This

@@ -1,6 +1,6 @@
 {
   "name": "fast-desktop-command",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Native Mac connection manager and fast MCP tools for Codex and ChatGPT",
   "mcpName": "io.github.mikkel32/fast-desktop-command",
   "license": "MIT",

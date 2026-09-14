@@ -9,7 +9,7 @@ struct NativeFailure: Error { let message: String }
         do {
             // ScreenCaptureKit needs an AppKit connection to WindowServer even
             // when this helper is launched as a command-line executable.
-            _ = NSApplication.shared
+            NSApplication.shared.setActivationPolicy(.prohibited)
             let data = FileHandle.standardInput.readDataToEndOfFile()
             guard data.count <= 100_000,
                   let request = try JSONSerialization.jsonObject(with: data) as? [String: Any],
