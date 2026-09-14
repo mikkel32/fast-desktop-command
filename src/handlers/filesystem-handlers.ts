@@ -159,13 +159,6 @@ export async function handleReadFile(args: unknown): Promise<ServerResult> {
                 ? fileResult.content
                 : fileResult.content.toString('base64');
             const imageSummary = `Image file: ${parsed.path} (${fileResult.mimeType})\n`;
-            const imageStructuredContent = {
-                fileName: path.basename(resolvedFilePath),
-                filePath: resolvedFilePath,
-                fileType: 'image' as const,
-                ...await getDefaultEditorMetadata(resolvedFilePath),
-                mimeType: fileResult.mimeType,
-            };
             // Widget pull (origin: 'ui'): return the base64 in a TEXT block, never
             // an image block. An image content block makes the host inline-vision-
             // render the result, which preempts delivery of this RPC response to
@@ -173,6 +166,15 @@ export async function handleReadFile(args: unknown): Promise<ServerResult> {
             // exactly the host-rendered types (png/jpeg/gif/webp). Text-only lets
             // the RPC response through so the widget can draw the <img>.
             if (parsed.origin === 'ui') {
+                // Only the widget needs editor metadata. Probing macOS handlers
+                // adds a cold subprocess launch to otherwise-fast model reads.
+                const imageStructuredContent = {
+                    fileName: path.basename(resolvedFilePath),
+                    filePath: resolvedFilePath,
+                    fileType: 'image' as const,
+                    ...(!parsed.isUrl ? await getDefaultEditorMetadata(resolvedFilePath) : {}),
+                    mimeType: fileResult.mimeType,
+                };
                 return {
                     content: [{ type: "text", text: imageData }],
                     structuredContent: imageStructuredContent,

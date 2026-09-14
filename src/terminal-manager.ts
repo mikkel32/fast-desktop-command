@@ -43,6 +43,7 @@ interface CompletedSession {
   endTime: Date;
   evictedLines: number;        // Carried over from the active session (see TerminalSession)
   evictedChars: number;
+  bufferedChars: number;
 }
 
 /**
@@ -147,6 +148,22 @@ function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig
 export class TerminalManager {
   private sessions: Map<number, TerminalSession> = new Map();
   private completedSessions: Map<number, CompletedSession> = new Map();
+  private outputListeners = new Map<number, Set<() => void>>();
+
+  /** Notify waiters only after the output buffer or completion state is updated. */
+  subscribeToOutput(pid: number, listener: () => void): () => void {
+    const listeners = this.outputListeners.get(pid) ?? new Set<() => void>();
+    listeners.add(listener);
+    this.outputListeners.set(pid, listeners);
+    return () => {
+      listeners.delete(listener);
+      if (listeners.size === 0) this.outputListeners.delete(pid);
+    };
+  }
+
+  private notifyOutput(pid: number): void {
+    for (const listener of [...(this.outputListeners.get(pid) ?? [])]) listener();
+  }
   
   /**
    * Send input to a running process
@@ -312,6 +329,7 @@ export class TerminalManager {
     return new Promise((resolve) => {
       let resolved = false;
       let periodicCheck: NodeJS.Timeout | null = null;
+      let waitTimeout: NodeJS.Timeout | null = null;
 
       // Quick prompt patterns for immediate detection
       const quickPromptPatterns = />>>\s*$|>\s*$|\$\s*$|#\s*$/;
@@ -320,6 +338,7 @@ export class TerminalManager {
         if (resolved) return;
         resolved = true;
         if (periodicCheck) clearInterval(periodicCheck);
+        if (waitTimeout) clearTimeout(waitTimeout);
 
         // Add timing info if requested
         if (collectTiming) {
@@ -344,6 +363,7 @@ export class TerminalManager {
       // waiting for output that will never arrive.
       forwardProcessError = (err: Error) => {
         this.sessions.delete(childProcess.pid!);
+        this.notifyOutput(childProcess.pid!);
         exitReason = 'process_exit';
         resolveOnce({
           pid: childProcess.pid!,
@@ -374,6 +394,7 @@ export class TerminalManager {
         }
         // Append to line-based buffer
         this.appendToLineBuffer(session, text);
+        this.notifyOutput(session.pid);
 
         // Record output event if collecting timing
         if (collectTiming) {
@@ -418,6 +439,7 @@ export class TerminalManager {
         }
         // Append to line-based buffer
         this.appendToLineBuffer(session, text);
+        this.notifyOutput(session.pid);
 
         // Record output event if collecting timing
         if (collectTiming) {
@@ -448,7 +470,7 @@ export class TerminalManager {
       }, 100);
 
       // Timeout fallback
-      setTimeout(() => {
+      waitTimeout = setTimeout(() => {
         session.isBlocked = true;
         exitReason = 'timeout';
         resolveOnce({
@@ -458,7 +480,8 @@ export class TerminalManager {
         });
       }, timeoutMs);
 
-      childProcess.on('exit', (code: any) => {
+      // 'close' follows stdout/stderr draining; 'exit' may precede the final bytes.
+      childProcess.on('close', (code: any) => {
         if (childProcess.pid) {
           // Store completed session before removing active session
           this.completedSessions.set(childProcess.pid, {
@@ -468,7 +491,8 @@ export class TerminalManager {
             startTime: session.startTime,
             endTime: new Date(),
             evictedLines: session.evictedLines,
-            evictedChars: session.evictedChars
+            evictedChars: session.evictedChars,
+            bufferedChars: session.bufferedChars
           });
 
           // Keep only last 100 completed sessions
@@ -478,6 +502,7 @@ export class TerminalManager {
           }
 
           this.sessions.delete(childProcess.pid);
+          this.notifyOutput(childProcess.pid);
         }
         exitReason = 'process_exit';
         resolveOnce({
@@ -509,6 +534,10 @@ export class TerminalManager {
         session.outputLines.push(line);
       } else if (i === 0) {
         // First fragment - append to last line (might be partial)
+        // A previously read partial line changed: make that line readable again.
+        if (line && session.lastReadIndex === session.outputLines.length) {
+          session.lastReadIndex--;
+        }
         session.outputLines[session.outputLines.length - 1] += line;
       } else {
         // Subsequent lines - add as new lines
@@ -698,12 +727,11 @@ export class TerminalManager {
   captureOutputSnapshot(pid: number): { totalChars: number; lineCount: number } | null {
     const session = this.sessions.get(pid);
     if (session) {
-      const fullOutput = session.outputLines.join('\n');
       return {
         // Absolute since process start (includes evicted output), so the
         // offset stays valid even if the cap evicts lines between
         // snapshot and read.
-        totalChars: session.evictedChars + fullOutput.length,
+        totalChars: session.evictedChars + session.bufferedChars,
         lineCount: session.evictedLines + session.outputLines.length
       };
     }
@@ -719,13 +747,13 @@ export class TerminalManager {
     // Check active session first
     const session = this.sessions.get(pid);
     if (session) {
-      return TerminalManager.outputSinceSnapshot(session.outputLines, session.evictedChars, snapshot.totalChars);
+      return TerminalManager.outputSinceSnapshot(session.outputLines, session.evictedChars, session.bufferedChars, snapshot.totalChars);
     }
 
     // Fallback to completed sessions - process may have finished between snapshot and poll
     const completedSession = this.completedSessions.get(pid);
     if (completedSession) {
-      return TerminalManager.outputSinceSnapshot(completedSession.outputLines, completedSession.evictedChars, snapshot.totalChars);
+      return TerminalManager.outputSinceSnapshot(completedSession.outputLines, completedSession.evictedChars, completedSession.bufferedChars, snapshot.totalChars);
     }
 
     return null;
@@ -736,13 +764,22 @@ export class TerminalManager {
    * If eviction dropped part of the unseen output, returns what the buffer
    * still holds — the oldest unseen chars are lost to the cap.
    */
-  private static outputSinceSnapshot(outputLines: string[], evictedChars: number, snapshotTotalChars: number): string {
-    const fullOutput = outputLines.join('\n');
-    const newChars = evictedChars + fullOutput.length - snapshotTotalChars;
-    if (newChars <= 0) {
-      return ''; // No new output
+  private static outputSinceSnapshot(outputLines: string[], evictedChars: number, bufferedChars: number, snapshotTotalChars: number): string {
+    let remaining = Math.min(bufferedChars, evictedChars + bufferedChars - snapshotTotalChars);
+    if (remaining <= 0) return '';
+    // Walk just the new tail, rather than joining megabytes of earlier output.
+    const fragments: string[] = [];
+    for (let i = outputLines.length - 1; i >= 0 && remaining > 0; i--) {
+      const line = outputLines[i];
+      const count = Math.min(remaining, line.length);
+      fragments.push(line.slice(line.length - count));
+      remaining -= count;
+      if (remaining > 0 && i > 0) {
+        fragments.push('\n');
+        remaining--;
+      }
     }
-    return fullOutput.substring(Math.max(0, fullOutput.length - newChars));
+    return fragments.reverse().join('');
   }
 
     /**

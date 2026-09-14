@@ -22,8 +22,9 @@ const __dirname = path.dirname(__filename);
 
 // Define test paths for different locations
 const HOME_DIR = os.homedir();
-const TEST_DIR_WITH_SLASH = path.join(__dirname, 'test_allowed_dirs') + '/';
-const TEST_DIR = path.join(__dirname, 'test_allowed_dirs');
+// The home-only case needs its fixture inside the isolated test home too.
+const TEST_DIR = path.join(process.env.FAF_TEST_HOME ? HOME_DIR : __dirname, 'test_allowed_dirs');
+const TEST_DIR_WITH_SLASH = TEST_DIR + '/';
 const OUTSIDE_DIR = path.join(os.tmpdir(), 'test_outside_allowed');
 const ROOT_PATH = '/';
 

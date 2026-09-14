@@ -7,10 +7,11 @@ import { promisify } from 'util';
 import { capture } from '../utils/capture.js';
 import { withTimeout, runWithAbortableTimeout } from '../utils/withTimeout.js';
 import { configManager } from '../config-manager.js';
-import { getFileHandler, TextFileHandler } from '../utils/files/index.js';
+import { getFileHandler } from '../utils/files/factory.js';
+import { TextFileHandler } from '../utils/files/text.js';
 import type { ReadOptions, FileResult, PdfPageItem } from '../utils/files/base.js';
 import { isPdfFile } from "./mime-types.js";
-import { parsePdfToMarkdown, editPdf, PdfOperations, PdfMetadata, parseMarkdownToPdf } from './pdf/index.js';
+import type { PdfOperations, PdfMetadata } from './pdf/index.js';
 import { isBinaryFile } from 'isbinaryfile';
 
 // CONSTANTS SECTION - Consolidate all timeouts and thresholds
@@ -368,21 +369,19 @@ export async function readFileFromUrl(url: string): Promise<FileResult> {
             signal: controller.signal
         });
 
-        // Clear the timeout since fetch completed
-        clearTimeout(timeoutId);
-
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
         // Get MIME type from Content-Type header or infer from URL
-        const contentType = response.headers.get('content-type') || 'text/plain';
+        const contentType = (response.headers.get('content-type') || 'text/plain').split(';')[0].trim().toLowerCase();
         const isImage = isImageFile(contentType);
         const isPdf = isPdfFile(contentType) || url.toLowerCase().endsWith('.pdf');
 
         // NEW: Add PDF handling before image check
         if (isPdf) {
             // Use URL directly - pdfreader handles URL downloads internally
+            const { parsePdfToMarkdown } = await import('./pdf/index.js');
             const pdfResult = await parsePdfToMarkdown(url);
 
             return {
@@ -411,15 +410,15 @@ export async function readFileFromUrl(url: string): Promise<FileResult> {
             return { content, mimeType: contentType, metadata: { isImage } };
         }
     } catch (error) {
-        // Clear the timeout to prevent memory leaks
-        clearTimeout(timeoutId);
-
         // Return error information instead of throwing
-        const errorMessage = error instanceof DOMException && error.name === 'AbortError'
+        const errorMessage = error instanceof Error && error.name === 'AbortError'
             ? `URL fetch timed out after ${FILE_OPERATION_TIMEOUTS.URL_FETCH}ms: ${url}`
             : `Failed to fetch URL: ${error instanceof Error ? error.message : String(error)}`;
 
         throw new Error(errorMessage);
+    } finally {
+        // Headers arriving does not mean the image body has finished downloading.
+        clearTimeout(timeoutId);
     }
 }
 
@@ -1020,6 +1019,7 @@ export async function writePdf(
             mode: 'create'
         });
 
+        const { parseMarkdownToPdf } = await import('./pdf/index.js');
         const pdfBuffer = await parseMarkdownToPdf(content, options);
         // Use outputPath if provided, otherwise overwrite input file
         const targetPath = outputPath ? await validatePath(outputPath) : validPath;
@@ -1050,6 +1050,7 @@ export async function writePdf(
         });
 
         // Perform the PDF editing
+        const { editPdf } = await import('./pdf/index.js');
         const modifiedPdfBuffer = await editPdf(validPath, operations);
 
         // Write the modified PDF to the output path

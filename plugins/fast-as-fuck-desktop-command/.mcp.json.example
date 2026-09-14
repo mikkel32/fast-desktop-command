@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "fast_desktop_command": {
+      "command": "node",
+      "args": ["/absolute/path/to/fast-desktop-command/scripts/app-connect.mjs"],
+      "env": {"DESKTOP_COMMANDER_DISABLE_TELEMETRY": "true"}
+    }
+  }
+}

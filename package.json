@@ -26,6 +26,13 @@
     "testemonials"
   ],
   "scripts": {
+    "start:local": "node dist/local.js",
+    "build:app": "python3 scripts/build-macos-app.py",
+    "test:app": "node --test test/app-service.test.mjs",
+    "bench:local": "node scripts/benchmark-local.mjs",
+    "test:fast": "node --test test/fast-local.test.mjs test/lazy-local.test.mjs test/image-command.test.mjs",
+    "test:upstream-focused": "node scripts/test-local-upstream.mjs",
+    "configure:plugin": "node scripts/configure-local-plugin.mjs",
     "postinstall": "node dist/track-installation.js && node dist/npm-scripts/verify-ripgrep.js || node -e \"process.exit(0)\"",
     "open-chat": "open -n /Applications/Claude.app",
     "device:install": "cd src/remote-device && npm install",

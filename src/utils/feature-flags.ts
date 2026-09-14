@@ -40,6 +40,11 @@ class FeatureFlagManager {
    * Initialize - load from cache and start background refresh
    */
   async initialize(): Promise<void> {
+    if (process.env.DC_LOCAL_PLUGIN === 'true') {
+      // Fixed local defaults; release first-run waiters without any network fetch.
+      this.resolveFreshFetch?.();
+      return;
+    }
     try {
       // Load from cache immediately (non-blocking)
       await this.loadFromCache();

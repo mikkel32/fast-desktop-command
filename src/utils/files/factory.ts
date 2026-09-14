@@ -10,23 +10,21 @@ import { FileHandler } from './base.js';
 import { TextFileHandler } from './text.js';
 import { ImageFileHandler } from './image.js';
 import { BinaryFileHandler } from './binary.js';
-import { ExcelFileHandler } from './excel.js';
-import { PdfFileHandler } from './pdf.js';
-import { DocxFileHandler } from './docx.js';
+import { isExcelPath } from './file-kinds.js';
 
 // Singleton instances of each handler
-let excelHandler: ExcelFileHandler | null = null;
+let excelHandler: Promise<FileHandler> | null = null;
 let imageHandler: ImageFileHandler | null = null;
 let textHandler: TextFileHandler | null = null;
 let binaryHandler: BinaryFileHandler | null = null;
-let pdfHandler: PdfFileHandler | null = null;
-let docxHandler: DocxFileHandler | null = null;
+let pdfHandler: Promise<FileHandler> | null = null;
+let docxHandler: Promise<FileHandler> | null = null;
 
 /**
  * Initialize handlers (lazy initialization)
  */
-function getExcelHandler(): ExcelFileHandler {
-    if (!excelHandler) excelHandler = new ExcelFileHandler();
+function getExcelHandler(): Promise<FileHandler> {
+    if (!excelHandler) excelHandler = import('./excel.js').then(({ ExcelFileHandler }) => new ExcelFileHandler());
     return excelHandler;
 }
 
@@ -45,13 +43,13 @@ function getBinaryHandler(): BinaryFileHandler {
     return binaryHandler;
 }
 
-function getPdfHandler(): PdfFileHandler {
-    if (!pdfHandler) pdfHandler = new PdfFileHandler();
+function getPdfHandler(): Promise<FileHandler> {
+    if (!pdfHandler) pdfHandler = import('./pdf.js').then(({ PdfFileHandler }) => new PdfFileHandler());
     return pdfHandler;
 }
 
-function getDocxHandler(): DocxFileHandler {
-    if (!docxHandler) docxHandler = new DocxFileHandler();
+function getDocxHandler(): Promise<FileHandler> {
+    if (!docxHandler) docxHandler = import('./docx.js').then(({ DocxFileHandler }) => new DocxFileHandler());
     return docxHandler;
 }
 
@@ -75,17 +73,17 @@ function getDocxHandler(): DocxFileHandler {
  */
 export async function getFileHandler(filePath: string): Promise<FileHandler> {
     // Check DOCX first (extension-based, sync)
-    if (getDocxHandler().canHandle(filePath)) {
+    if (filePath.toLowerCase().endsWith('.docx')) {
         return getDocxHandler();
     }
 
     // Check PDF (extension-based, sync)
-    if (getPdfHandler().canHandle(filePath)) {
+    if (filePath.toLowerCase().endsWith('.pdf')) {
         return getPdfHandler();
     }
 
     // Check Excel (extension-based, sync)
-    if (getExcelHandler().canHandle(filePath)) {
+    if (isExcelPath(filePath)) {
         return getExcelHandler();
     }
 
@@ -105,12 +103,12 @@ export async function getFileHandler(filePath: string): Promise<FileHandler> {
 
 /**
  * Check if a file path is an Excel file
- * Delegates to ExcelFileHandler.canHandle to avoid duplicating extension logic
+ * Shares the cheap extension check with ExcelFileHandler.canHandle.
  * @param path File path
  * @returns true if file is Excel format
  */
 export function isExcelFile(path: string): boolean {
-    return getExcelHandler().canHandle(path);
+    return isExcelPath(path);
 }
 
 /**

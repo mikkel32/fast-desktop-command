@@ -156,8 +156,8 @@ async function testExactNumberOfOccurrences() {
     // Check that the operation succeeded
     assert.strictEqual(result.content[0].type, 'text', 'Result should be text');
     assert.ok(
-      result.content[0].text.includes('Successfully applied 4 edits'),
-      'Should report success with the correct number of edits'
+      !result.isError && result.content[0].text.includes('This line has been replaced correctly.'),
+      'Should return the edited text preview'
     );
     
     // Verify the file content
@@ -200,8 +200,8 @@ This is a MODIFIED target line in the header.`,
     // Check that the operation succeeded
     assert.strictEqual(result.content[0].type, 'text', 'Result should be text');
     assert.ok(
-      result.content[0].text.includes('Successfully applied 1 edit'),
-      'Should report success with the header edit'
+      !result.isError && result.content[0].text.includes('This is a MODIFIED target line in the header.'),
+      'Should return the edited header preview'
     );
     
     // Target the occurrence in the footer section using context
@@ -217,8 +217,8 @@ This is a MODIFIED target line in the footer.`,
     // Check that the operation succeeded
     assert.strictEqual(result.content[0].type, 'text', 'Result should be text');
     assert.ok(
-      result.content[0].text.includes('Successfully applied 1 edit'),
-      'Should report success with the footer edit'
+      !result.isError && result.content[0].text.includes('This is a MODIFIED target line in the footer.'),
+      'Should return the edited footer preview'
     );
     
     // Verify the file content
@@ -283,20 +283,15 @@ async function testEmptySearchString() {
   console.log('\nTest 6: Empty search string');
   
   try {
-    // Try to use an empty search string
-    const result = await handleEditBlock({
+    const before = await fs.readFile(CONTEXT_TEST_FILE, 'utf8');
+    // The argument schema now rejects this before the handler can edit anything.
+    await assert.rejects(() => handleEditBlock({
       file_path: CONTEXT_TEST_FILE,
       old_string: '',
       new_string: 'This replacement should not be applied.',
       expected_replacements: 1
-    });
-    
-    // Check that we got the appropriate error message
-    assert.strictEqual(result.content[0].type, 'text', 'Result should be text');
-    assert.ok(
-      result.content[0].text.includes('Empty search strings are not allowed'),
-      'Should report that empty search strings are not allowed'
-    );
+    }), /Must provide either/);
+    assert.strictEqual(await fs.readFile(CONTEXT_TEST_FILE, 'utf8'), before);
     
     console.log('✓ Test correctly rejected empty search string');
   } catch (error) {

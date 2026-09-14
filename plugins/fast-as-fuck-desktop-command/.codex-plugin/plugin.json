@@ -1,0 +1,19 @@
+{
+  "name": "fast-as-fuck-desktop-command",
+  "version": "0.1.0+codex.20260914144317",
+  "description": "Local Desktop Commander fork with event-driven process output and direct stdio transport.",
+  "author": {
+    "name": "Mikkel"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "fast-as-fuck Desktop-Command",
+    "shortDescription": "Fast local files, commands, search, and persistent processes.",
+    "longDescription": "A personal fork of the MIT-licensed Desktop Commander engine. Connects directly to this Mac over stdio, reads only new process output, and wakes pending calls on output or completion. Uses its own configuration directory and disables telemetry and hosted experiments.",
+    "developerName": "Mikkel",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Use fast-as-fuck Desktop-Command to list sessions and inspect the local fork's benchmark report."
+  },
+  "mcpServers": "./.mcp.json"
+}

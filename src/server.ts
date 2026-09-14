@@ -17,7 +17,9 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { getSystemInfo, getOSSpecificGuidance, getPathGuidance, getDevelopmentToolGuidance } from './utils/system-info.js';
 
 // Get system information once at startup
-const SYSTEM_INFO = getSystemInfo();
+// Local startup needs OS/path guidance, not a blocking interpreter probe.
+// get_config still discovers the full installed tool information on demand.
+const SYSTEM_INFO = getSystemInfo({ probePython: process.env.DC_LOCAL_PLUGIN !== 'true' });
 const OS_GUIDANCE = getOSSpecificGuidance(SYSTEM_INFO);
 const DEV_TOOL_GUIDANCE = getDevelopmentToolGuidance(SYSTEM_INFO);
 const PATH_GUIDANCE = `IMPORTANT: ${getPathGuidance(SYSTEM_INFO)} Relative paths may fail as they depend on the current working directory. Tilde paths (~/...) might not work in all contexts. Unless the user explicitly asks for relative paths, use absolute paths.`;
@@ -95,11 +97,13 @@ export function flushDeferredMessages() {
 
 deferLog('info', 'Loading server.ts');
 
+const SERVER_INFO = {
+    name: process.env.DC_LOCAL_PLUGIN === 'true' ? 'fast-as-fuck-desktop-command' : 'desktop-commander',
+    version: process.env.DC_LOCAL_PLUGIN === 'true' ? `${VERSION}+faf.3` : VERSION,
+};
+
 export const server = new Server(
-    {
-        name: "desktop-commander",
-        version: VERSION,
-    },
+    SERVER_INFO,
     {
         capabilities: {
             tools: {},
@@ -264,10 +268,7 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
                 prompts: {},
                 logging: {},
             },
-            serverInfo: {
-                name: "desktop-commander",
-                version: VERSION,
-            },
+            serverInfo: SERVER_INFO,
         };
     } catch (error) {
         logToStderr('error', `Error in initialization handler: ${error}`);

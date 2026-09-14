@@ -497,7 +497,7 @@ function detectPythonInfo(): SystemInfo['pythonInfo'] {
 /**
  * Get comprehensive system information for tool prompts
  */
-export function getSystemInfo(): SystemInfo {
+export function getSystemInfo(options: { probePython?: boolean } = {}): SystemInfo {
     const platform = os.platform();
     const isWindows = platform === 'win32';
     const isMacOS = platform === 'darwin';
@@ -589,7 +589,7 @@ export function getSystemInfo(): SystemInfo {
     const nodeInfo = detectNodeInfo();
 
     // Detect Python installation
-    const pythonInfo = detectPythonInfo();
+    const pythonInfo = options.probePython === false ? undefined : detectPythonInfo();
 
     // Get process information
     const processInfo = {

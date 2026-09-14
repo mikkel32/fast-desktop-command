@@ -33,7 +33,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
   private clientName: string = 'unknown';
   private disableNotifications: boolean = false;
 
-  constructor() {
+  constructor(private readonly quiet: boolean = false) {
     super();
     
     // Store original methods
@@ -223,6 +223,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
   }
 
   private sendLogNotification(level: "emergency" | "alert" | "critical" | "error" | "warning" | "notice" | "info" | "debug", args: any[]) {
+    if (this.quiet && (level === 'debug' || level === 'info' || level === 'notice')) return;
     // Skip if notifications are disabled (e.g., for Cline)
     if (this.disableNotifications) {
       return;
@@ -280,6 +281,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
    * Now properly buffers messages before MCP initialization to avoid breaking stdio protocol
    */
   public sendLog(level: "emergency" | "alert" | "critical" | "error" | "warning" | "notice" | "info" | "debug", message: string, data?: any) {
+    if (this.quiet && (level === 'debug' || level === 'info' || level === 'notice')) return;
     // Skip if notifications are disabled (e.g., for Cline)
     if (this.disableNotifications) {
       return;

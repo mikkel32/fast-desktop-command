@@ -1,5 +1,11 @@
 # Dependencies
 node_modules/
+macos/.build/
+Fast Desktop Command.app/
+benchmarks/
+release/
+FAST-DESKTOP-COMMAND.md
+plugins/fast-as-fuck-desktop-command/.mcp.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

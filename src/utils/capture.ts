@@ -482,11 +482,14 @@ const postTelemetryPayload = async (endpoint: string, payload: string): Promise<
 export const capture = async (event: string, properties?: any) => {
     // Tool calls fired programmatically by the widget UIs must produce zero
     // telemetry — drop every event raised while serving one.
-    if (isInsideUiOriginCall()) {
+    if (isInsideUiOriginCall() || isTelemetryDisabledByEnv()) {
         return;
     }
     void (async () => {
         try {
+            // Disabling telemetry must skip collection as well as the HTTP send.
+            // Property collection probes installed tools and can block the event loop.
+            if (isTelemetryDisabledValue(await configManager.getValue('telemetryEnabled'))) return;
             const eventProperties = await buildEventProperties(properties);
             await sendToTelemetryProxy(event, eventProperties);
         } catch {

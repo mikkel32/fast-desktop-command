@@ -277,11 +277,11 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
         }
 
         let resolved = false;
-        let interval: NodeJS.Timeout | null = null;
+        let unsubscribe: (() => void) | null = null;
         let timeout: NodeJS.Timeout | null = null;
 
         const cleanup = () => {
-          if (interval) clearInterval(interval);
+          unsubscribe?.();
           if (timeout) clearTimeout(timeout);
         };
 
@@ -292,18 +292,19 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
           resolve();
         };
 
-        // Poll for new output
-        interval = setInterval(() => {
+        const checkOutput = () => {
           const newLineCount = terminalManager.getOutputLineCount(pid) || 0;
-          if (newLineCount > session.lastReadIndex) {
+          if (newLineCount > session.lastReadIndex || !terminalManager.getSession(pid)) {
             resolveOnce();
           }
-        }, 50);
+        };
+        unsubscribe = terminalManager.subscribeToOutput(pid, checkOutput);
 
         // Timeout
         timeout = setTimeout(() => {
           resolveOnce();
         }, timeout_ms);
+        checkOutput();
       });
     };
 
@@ -428,7 +429,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
   let firstOutputTime: number | undefined;
   let lastOutputTime: number | undefined;
   const outputEvents: any[] = [];
-  let exitReason: 'early_exit_quick_pattern' | 'early_exit_periodic_check' | 'process_finished' | 'timeout' | 'no_wait' = 'timeout';
+  let exitReason: 'early_exit_quick_pattern' | 'early_exit_periodic_check' | 'early_exit_output_event' | 'process_finished' | 'timeout' | 'no_wait' = 'timeout';
 
   try {
     capture('server_interact_with_process', {
@@ -475,32 +476,27 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
       };
     }
 
-    // Smart waiting with immediate and periodic detection
+    // React to output and completion without adding a polling interval.
     let output = "";
     let processState: ProcessState | undefined;
     let earlyExit = false;
 
-    // Quick prompt patterns for immediate detection
-    const quickPromptPatterns = />>>\s*$|>\s*$|\$\s*$|#\s*$/;
-    
     const waitForResponse = (): Promise<void> => {
       return new Promise((resolve) => {
         let resolved = false;
-        let attempts = 0;
-        const pollIntervalMs = 50; // Poll every 50ms for faster response
-        const maxAttempts = Math.ceil(timeout_ms / pollIntervalMs);
-        let interval: NodeJS.Timeout | null = null;
+        let unsubscribe: (() => void) | null = null;
+        let timeout: NodeJS.Timeout | null = null;
         let lastOutputLength = 0; // Track output length to detect new output
 
-        let resolveOnce = () => {
+        const resolveOnce = () => {
           if (resolved) return;
           resolved = true;
-          if (interval) clearInterval(interval);
+          unsubscribe?.();
+          if (timeout) clearTimeout(timeout);
           resolve();
         };
 
-        // Fast-polling check - check every 50ms for quick responses
-        interval = setInterval(() => {
+        const checkOutput = () => {
           if (resolved) return;
 
           // Use snapshot-based reading to handle REPL prompt line appending
@@ -517,7 +513,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
               outputEvents.push({
                 timestamp: now,
                 deltaMs: now - startTime,
-                source: 'periodic_poll',
+                source: 'output_event',
                 length: newOutput.length - lastOutputLength,
                 snippet: newOutput.slice(lastOutputLength, lastOutputLength + 50).replace(/\n/g, '\\n')
               });
@@ -528,34 +524,41 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
 
             // Analyze current state
             processState = analyzeProcessState(output, pid);
-
-            // Exit early if we detect the process is waiting for input
-            if (processState.isWaitingForInput) {
-              earlyExit = true;
-              exitReason = 'early_exit_periodic_check';
-
-              if (verbose_timing && outputEvents.length > 0) {
-                outputEvents[outputEvents.length - 1].matchedPattern = 'periodic_check';
-              }
-
-              resolveOnce();
-              return;
-            }
-
-            // Also exit if process finished
-            if (processState.isFinished) {
-              exitReason = 'process_finished';
-              resolveOnce();
-              return;
-            }
           }
 
-          attempts++;
-          if (attempts >= maxAttempts) {
-            exitReason = 'timeout';
+          // A process may exit without printing anything (or after its last output).
+          if (!terminalManager.getSession(pid)) {
+            processState = { isFinished: true, isRunning: false,
+              isWaitingForInput: false, lastOutput: output };
+            exitReason = 'process_finished';
+            resolveOnce();
+            return;
+          }
+
+          // Exit early if we detect the process is waiting for input.
+          if (processState?.isWaitingForInput) {
+            earlyExit = true;
+            exitReason = 'early_exit_output_event';
+
+            if (verbose_timing && outputEvents.length > 0) {
+              outputEvents[outputEvents.length - 1].matchedPattern = 'output_event';
+            }
+
+            resolveOnce();
+            return;
+          }
+
+          if (processState?.isFinished) {
+            exitReason = 'process_finished';
             resolveOnce();
           }
-        }, pollIntervalMs);
+        };
+        unsubscribe = terminalManager.subscribeToOutput(pid, checkOutput);
+        timeout = setTimeout(() => {
+          exitReason = 'timeout';
+          resolveOnce();
+        }, timeout_ms);
+        checkOutput();
       });
     };
     

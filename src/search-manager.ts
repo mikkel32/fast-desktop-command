@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import { validatePath } from './tools/filesystem.js';
 import { capture } from './utils/capture.js';
 import { getRipgrepPath } from './utils/ripgrep-resolver.js';
-import { isExcelFile } from './utils/files/index.js';
+import { isExcelFile } from './utils/files/factory.js';
 import PizZip from 'pizzip';
 
 export interface SearchResult {
